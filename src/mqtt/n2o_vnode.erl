@@ -86,7 +86,7 @@ proc({publish, To, Request},
                                                 Reply -> {error,{"Invalid Return",Reply}}
             end
         catch Err:Rea ->
-            n2o:error(?MODULE,"Catch:~p~n",[n2o:stack_trace(Err,Rea)])
+            n2o:crash(?MODULE,Err,Rea)
         end;
         Addr -> {error,{"Unknown Address",Addr}} end,
     debug(Name,To,Bert,Addr,Return),

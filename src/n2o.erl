@@ -12,13 +12,14 @@
 -export([send/2,reg/1,unreg/1,reg/2]).        % mq
 -export([pickle/1,depickle/1]).               % pickle
 -export([encode/1,decode/1]).                 % format
--export([info/3,warning/3,error/3]).          % log
+-export([info/2,warning/2,error/2]).          % log
+-export([info/3,warning/3,error/3,crash/3]).  % log
 -export([session/1,session/2,user/1,user/0]). % session
 
 % BUILT-IN BACKENDS
 
--export([cache/2,cache/3,cache/4,invalidate_cache/1]).               % cache
--export([erroring/0,stack/2,erroring/2,stack_trace/2,error_page/2]). % error
+-export([cache/2,cache/3,cache/4,invalidate_cache/1]).       % cache
+-export([erroring/0,erroring/2,stack_trace/2,error_page/2]). % error
 
 % START VNODE HASH RING
 
@@ -71,7 +72,6 @@ depickle(SerializedData) -> (pickler()):depickle(SerializedData).
 % ERROR
 
 erroring() -> application:get_env(n2o,erroring,n2o).
-stack(Error, Reason) -> (erroring()):stack_trace(Error, Reason).
 erroring(Class, Error) -> (erroring()):error_page(Class, Error).
 
 % SESSION
@@ -150,19 +150,32 @@ level(error)   -> 2;
 level(warning) -> 1;
 level(_)       -> 0.
 
-log(M,F,A,Fun) ->
-    case level(Fun) < level(log_level()) of
+do_log(logger, Level, [M, Report]) -> logger:log(Level, Report#{module => M}, #{module => M});
+do_log(logger, Level, [M, Fmt, Args]) -> logger:log(Level, Fmt, Args, #{module => M});
+do_log(M, F, A) -> apply(M, F, A).
+
+log(Level, [M|_] = Args) ->
+    case level(Level) < level(log_level()) of
          true  -> skip;
-         false -> case    log_modules() of
-             any       -> (logger()):Fun(M,F,A);
+         false -> case log_modules() of
+             any       -> do_log(logger(), Level, Args);
              []        -> skip;
              Allowed   -> case lists:member(M, Allowed) of
-                 true  -> (logger()):Fun(M,F,A);
+                 true  -> do_log(logger(), Level, Args);
                  false -> skip end end end.
 
-info   (Module, String, Args) -> log(Module,  String, Args, info).
-warning(Module, String, Args) -> log(Module,  String, Args, warning).
-error  (Module, String, Args) -> log(Module,  String, Args, error).
+info   (M, A) -> log(info,    [M, A]).
+warning(M, A) -> log(warning, [M, A]).
+error  (M, A) -> log(error,   [M, A]).
+
+info   (M, F, A) -> log(info,    [M, F, A]).
+warning(M, F, A) -> log(warning, [M, F, A]).
+error  (M, F, A) -> log(error,   [M, F, A]).
+
+crash(Module, Error, Reason) ->
+    Stack = erlang:get_stacktrace(),
+    n2o:error(Module,#{'catch' => Error, reason => Reason, stack => erlang:get_stacktrace()}),
+    {Error, Reason, Stack}.
 
 %%
 

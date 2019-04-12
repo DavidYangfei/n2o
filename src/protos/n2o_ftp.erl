@@ -18,11 +18,7 @@ filename(#ftp{sid=_Sid,filename=FileName}) -> FileName. %filename:join(lists:con
 
 info(#ftp{status = {event, _}}=FTP, Req, State) ->
     Module = case State#cx.module of [] -> index; M -> M end,
-    Reply = try Module:event(FTP) catch E:R ->
-        Error = n2o:stack(E,R),
-        n2o:error(?MODULE,"Catch: ~p~n",[Error]),
-        Error
-    end,
+    Reply = try Module:event(FTP) catch E:R -> n2o:crash(?MODULE,E,R) end,
     {reply, {bert, {io,n2o_nitro:render_actions(nitro:actions()), Reply}}, Req, State};
 
 info(#ftp{id = Link, status = <<"init">>, block = Block, offset = Offset}=FTP, Req, State) ->
@@ -51,7 +47,7 @@ info(#ftp{id = Link, status = <<"send">>}=FTP, Req, State) ->
     Reply = try
         n2o_async:send(file, Link, FTP)
     catch E:R ->
-        n2o:error(?MODULE,"FTP ERROR: ~p~n",[ {E,R} ]),
+        n2o:crash(?MODULE,E,R),
         FTP#ftp{data = <<>>,sid = <<>>, block = ?STOP}
     end,
     {reply, {bert, Reply}, Req, State};

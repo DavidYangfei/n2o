@@ -17,9 +17,7 @@ info(#init{token=Auth}, Req, State = #cx{module = Module}) ->
      {Act,Tok} = try Module:event(init),
                      A = render_actions(nitro:actions()),
                      {A,{'Token',Token}}
-               catch Err1:Rea1 -> StackInit = n2o:stack(Err1,Rea1),
-                     n2o:error(?MODULE,"Catch:~p~n",[StackInit]),
-                     {<<>>,{stack,StackInit}} end,
+               catch Err:Rea -> {<<>>,{stack,n2o:crash(?MODULE,Err,Rea)}} end,
      {reply, {bert,{io,Act,Tok}},Req,New};
 
 info(#client{data=Message}, Req, State) ->
@@ -27,17 +25,13 @@ info(#client{data=Message}, Req, State) ->
     n2o:info(?MODULE,"Client Message: ~p",[Message]),
     Module = State#cx.module,
     Reply = try Module:event(#client{data=Message})
-          catch Err:Rea -> Stack = n2o:stack(Err,Rea),
-                           n2o:error(?MODULE,"Catch:~p~n",[Stack]),
-                           {error,Stack} end,
+          catch Err:Rea -> {error,n2o:crash(?MODULE,Err,Rea)} end,
     {reply,{bert,{io,render_actions(nitro:actions()),Reply}},Req,State};
 
 info(#pickle{}=Event, Req, State) ->
     nitro:actions([]),
     Result = try html_events(Event,State)
-           catch E:R -> Stack = n2o:stack(E,R),
-                        n2o:error(?MODULE,"Catch: ~p:~p~n~p", Stack),
-                        {io,render_actions(nitro:actions()),Stack} end,
+           catch E:R -> {io,render_actions(nitro:actions()),n2o:crash(?MODULE,E,R)} end,
     {reply,{bert,Result}, Req,State};
 
 info(#flush{data=Actions}, Req, State) ->
@@ -48,9 +42,7 @@ info(#direct{data=Message}, Req, State) ->
     nitro:actions([]),
     Module = State#cx.module,
     Result = try Res = Module:event(Message), {direct,Res}
-           catch E:R -> Stack = n2o:stack(E, R),
-                        n2o:error(?MODULE,"Catch: ~p:~p~n~p", Stack),
-                        {stack,Stack} end,
+           catch E:R -> {stack,n2o:crash(?MODULE,E,R)} end,
     {reply,{bert,{io,render_actions(nitro:actions()),Result}}, Req,State};
 
 info(Message,Req,State) -> {unknown,Message,Req,State}.
