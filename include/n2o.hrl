@@ -1,3 +1,4 @@
+-include_lib("kernel/include/logger.hrl").
 -ifndef(N2O_HRL).
 -define(N2O_HRL, true).
 
