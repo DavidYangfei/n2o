@@ -1,6 +1,6 @@
 -module(n2o_heart).
 -description('N2O Heartbeat Protocol').
--include_lib("kernel/include/logger.hrl").
+-include("n2o.hrl").
 -export([info/3]).
 
 info({text,<<"PING">> = _Ping}=Message, Req, State) ->

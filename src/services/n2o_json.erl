@@ -1,6 +1,6 @@
 -module(n2o_json).
 -description('N2O JSON Formatter').
--include_lib("kernel/include/logger.hrl").
+-include("n2o.hrl").
 -export([encode/1,decode/1]).
 
 encode({Io,Eval,Data}) ->

@@ -6,7 +6,11 @@
 -else.
 -define(LOG_INFO(F), true).
 -define(LOG_INFO(F,X), true).
--define(LOG_ERROR(F), case F of _ when is_map(F) -> io:format("{~p,~p}: ~p~n", [?MODULE,?LINE,F]); _ -> io:format(F) end).
+-define(LOG_ERROR(F),
+        case F of
+            _ when is_map(F) -> io:format("{~p,~p}: ~p~n", [?MODULE,?LINE,F]);
+            _ -> io:format(F)
+        end).
 -define(LOG_ERROR(F,X), io:format(F, M)).
 -endif.
 
